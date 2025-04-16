@@ -16,8 +16,8 @@ The following sections contain a thorough description of the different steps con
 1. [Installation](#id1)
 2. [Sequencing data and QC](#id2)
 3. [Assembly-free analysis](#id3)
-4. [Assembly-based analysis](#id4)
-4.1. [Contig-level analysis](#id41)
+4. [Assembly-based analysis](#id4)  
+4.1. [Contig-level analysis](#id41)  
 4.2. [MAG-level analysis](#id42)
 5. [Visualization](#id5)
 
