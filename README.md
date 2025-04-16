@@ -15,11 +15,11 @@ The following sections contain a thorough description of the different steps con
 **Index**  
 1. [Installation](#id1)
 2. [Sequencing data and QC](#id2)
-3. [Assembly-free analysis](#id2)
-4. [Assembly-based analysis](#id3)
-4.1. [Contig-level analysis](#id31)
-4.2. [Metagenome Associated Genomes (MAGs)](#id32)
-5. [Visualization](#id4)
+3. [Assembly-free analysis](#id3)
+4. [Assembly-based analysis](#id4)
+4.1. [Contig-level analysis](#id41)
+4.2. [MAG-level analysis](#id42)
+5. [Visualization](#id5)
 
 <br>
 
@@ -41,7 +41,7 @@ conda activate master
 
 ## 2. Sequencing data and QC<a name="id2"></a>
 
-The sequencing data per sample, their corresponding BioProject and BioSample IDs for public download and their corresponding metadata can be observed in the Supplementary Table 3 of the manuscript (not publicly available yet) and also [here].  
+The sequencing data per sample, their corresponding BioProject and BioSample IDs for public download and their corresponding metadata can be observed in the Supplementary Table 3 of the manuscript (not publicly available yet) and also [here](https://raw.githubusercontent.com/nmquijada/food-production-resistome/refs/heads/main/files/Supplementary_Table_3_MASTER_metadata.tsv).  
 The different accession numbers contain the already QCed data, while the process is described in the corresponding section of [MASTER-WP5-pipelines](https://github.com/SegataLab/MASTER-WP5-pipelines/tree/master/02-Preprocessing).  
 
 Briefly:
@@ -70,7 +70,57 @@ where:
 
 <br>
 
-## 4. Assembly-free analysis<a name="id4"></a>
+## 4. Assembly-based analysis<a name="id4"></a>
+
+From the QC reads, an assembly and was performed as thorughlly described in the corresponding section of [MASTER-WP5-pipelines](https://github.com/SegataLab/MASTER-WP5-pipelines/tree/master/05-Assembly_pipeline).  
+The resulting draft metagenomes (contigs) in FASTA file were either subjected to the [TORMES pipeline](https://github.com/nmquijada/tormes) for further downstream analysis at contig-level or used for metagenome assembled genomes (MAGs) extraction.  
+
+<br>
+
+[Back to index](#idx)
+
+<br>
+
+## 4.1 Contig-level analysis<a name="id41"></a>
+
+1. Define your variables
+
+```bash
+WORKDIR=# define your working directory
+# Then define the "input directory" containing the contigs FASTA files in different directories regarding the sample. e.g
+INDIR=/path/to/02.metagenome_assembly
+```
+
+The `metagenome_assembly` directory is expected to have the assemblies sorted by samples, as:
+
+```
+|-- /path/to/metagenome_assembly/00.raw_reads
+|-- /path/to/metagenome_assembly/01.QC_reads
+|-- /path/to/metagenome_assembly/02.metagenome_assembly
+```
+
+```
+|-- /path/to/metagenome_assembly/02.metagenome_assembly/Sample_01/contigs.fasta
+|-- /path/to/metagenome_assembly/02.metagenome_assembly/Sample_02/contigs.fasta
+|-- ...
+|-- /path/to/metagenome_assembly/02.metagenome_assembly/Sample_n/contigs.fasta
+```
+
+2. Create TORMES metadata. There's an useful tutorial on how to do it [here](https://github.com/nmquijada/tormes/wiki/Shortcut-to-generate-the-metadata-file-for-TORMES)
+
+```bash
+for SAMPLE in $(ls ${INDIR}); do
+  mkdir ${WORKDIR}/${SAMPLE}
+  echo -e "${SAMPLE}\tGENOME\t${INDIR}/${SAMPLE}/contigs.fasta\tcontigs from ${SAMPLE}" >> ${WORKDIR}/tormes-metadata.txt
+done
+sed -i "1iSamples\tRead1\tRead2\tDescription" > ${WORKDIR}/tormes-metadata.txt
+# further description and metadata fields can be used, if needed
+```
+
+3. Run TORMES
+```bash
+tormes -m ${WORKDIR}/tormes-metadata.txt -t 64 --no_pangenome --gene_min_id 80 --gene_min_cov 80 --only_gene_prediction --prodigal_options "-p meta" --custom_genes_db "plasmidfinder" --min_contig_len 1000 -o ${WORKDIR}/MASTER-tormes 
+```
 
 <br>
 
