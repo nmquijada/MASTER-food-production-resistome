@@ -16,10 +16,11 @@ The following sections contain a thorough description of the different steps con
 1. [Installation](#id1)
 2. [Sequencing data and QC](#id2)
 3. [Assembly-free analysis](#id3)
-4. [Assembly-based analysis](#id4)  
-4.1. [Contig-level analysis](#id41)  
+4. [Assembly-based analysis](#id4)
+4.1. [Contig-level analysis](#id41)
 4.2. [MAG-level analysis](#id42)
-5. [Visualization](#id5)
+5. [Mobile Genetic Elements](#id5)
+6. [Visualization](#id6)
 
 <br>
 
@@ -122,9 +123,85 @@ sed -i "1iSamples\tRead1\tRead2\tDescription" > ${WORKDIR}/tormes-metadata.txt
 tormes -m ${WORKDIR}/tormes-metadata.txt -t 64 --no_pangenome --gene_min_id 80 --gene_min_cov 80 --only_gene_prediction --prodigal_options "-p meta" --custom_genes_db "plasmidfinder" --min_contig_len 1000 -o ${WORKDIR}/MASTER-tormes 
 ```
 
+This command will generate the AMR screening results based on sequence alignment (BLASTN) of the contigs against 3 databases (ResFinder, CARD, Argannot).  
+For this study we used RedFinder database, so the results will be stored in:  
+
+`${WORKDIR}/MASTER-tormes/resfinder/`
+
+
 <br>
 
 [Back to index](#idx)
 
 <br>
+
+## 4.2 MAG-level analysis<a name="id42"></a>
+
+<br>
+
+[Back to index](#idx)
+
+<br>
+
+## 5. Mobile Genetic Elements<a name="id5"></a>
+
+Different software were used for the investigation of MGE and the main steps are described below and with more detail [here](https://github.com/nmquijada/MASTER-food-production-resistome/blob/main/assembly-based_workflow/mobilome_workflow.md)  
+
+### 5.1 Plasmids
+
+<br>
+
+#### PlasmidFinder
+
+The results from this database were performed with TORMES and stored in: 
+
+`${WORKDIR}/MASTER-tormes/custom_genes_db/plasmidfinder`
+
+The results indicate all those contigs where a plasmidic replicon was found.  
+Due to the short length of the plasmidic replicons contained in PlasmidFinder, only those hits > 95% identity and coverage where considered
+
+<br>
+
+#### Platon
+
+```bash
+# Define database
+PLATON_DB=/PATH/TO/Platon-DB/db
+
+# Generate output directory
+mkdir ${WORKDIR}/MGE/platon
+platon --db ${PLATON_DB} --output ${WORKDIR}/MGE/platon -p ${SAMPLE} --threads 8 --meta ${WORKDIR}/MASTER-tormes/${SAMPLE}.fasta
+```
+
+The output will contain all those contigs that are potentially plasmidic in a file `${SAMPLE}.plasmid.fasta` located in `${WORKDIR}/MGE/platon`
+
+<br>
+
+#### geNomad
+
+```bash
+# Define database
+GENOMAD_DB=/PATH/TO/genomad/genomad_db
+
+# Run geNomad
+genomad end-to-end --cleanup ${WORKDIR}/MASTER-tormes/${SAMPLE}.fasta ${WORKDIR}/genomad ${GENOMAD_DB}
+```
+
+The results in file `${SAMPLE}_plasmid_summary.tsv` will contain the ID of all those contigs that are potentially plasmidic.  
+This file is stored in `${WORKDIR}/genomad/${SAMPLE}_summary/`
+
+<br>
+
+[Back to index](#idx)
+
+<br>
+
+## 6. Visualization<a name="id6"></a>
+
+<br>
+
+[Back to index](#idx)
+
+<br>
+
 
