@@ -154,6 +154,9 @@ ruby 01.viromeqc.rb folder_filtered_reads
 ```
 
 The *Bacterial Markers alignment* value indicates the proportion of bacterial DNA on a metagenomic fastq file, thus applying this parameter on the equation we remove those reads not assigned to bacterial taxa.
+
+An example of how to calculate this CPM using R-script is located on *assembly-free_workflow/calculate_cpm* folder, which contains *calculate_cpm.R*, *matrix_ResFinder.txt* and *viromeqc_all.txt* files.
+
 <br>
 
 [Back to index](#idx)
