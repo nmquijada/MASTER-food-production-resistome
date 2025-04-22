@@ -13,26 +13,62 @@ The following sections contain a thorough description of the different steps con
 <br>
 
 **Index**  
-1. [Installation](#id1)
+1. [Installation and set up](#id1)
 2. [Sequencing data and QC](#id2)
 3. [Assembly-free analysis](#id3)
 4. [Assembly-based analysis](#id4)  
-4.1. [Contig-level analysis](#id41)  
-4.2. [MAG-level analysis](#id42)
 5. [Mobile Genetic Elements](#id5)
 6. [Visualization](#id6)
 
 <br>
 
-## 1. Installation<a name="id1"></a>
+## 1. Installation and set up<a name="id1"></a>
 
-In order to reproduce the analyses conducted in the manuscript, we uploaded a yaml file containing the different software and versions used.  
+In order to reproduce the analyses conducted in the manuscript, we uploaded [different yaml files](https://github.com/nmquijada/MASTER-food-production-resistome/tree/main/files) containing the different software and versions used.  
 > Please note that the recreation of complex environments by using conda can fail when multiple software with multiple versions are required. If that happens, please try to "relax" the yaml file by enabling conda to look for different software versions (instead of pushing the one in the yaml, if there is not any incompatibilities) or try to generate different environments with less software in each yaml file.
 
 ```bash
-conda env create -n master -f master.yml
-conda activate master
+conda env create -n <environment> -f <environment>.yml
+conda activate <environment>
 ```
+
+<br>
+
+The reproduction of the code requires that the data is stored hierarchically as follows.   
+
+The first level is `${DATASET}` represent the different company partners. Three main directories per `${DATASET}` are available:  
+
+```
+|-- /path/to/${DATASET}/reads/
+|-- /path/to/${DATASET}/contigs/
+|-- /path/to/${DATASET}/mags/
+```
+
+Second, each sample from the dataset is a subdirectory stored in the different directories, depending on the type of data you will encounter (i.e. reads, contigs or MAGs). Here, the total of samples are represented as `${SAMPLE}`:  
+
+```
+|-- /path/to/${DATASET}/reads/${SAMPLE}/
+|-- /path/to/${DATASET}/contigs/${SAMPLE}/
+|-- /path/to/${DATASET}/mags/${SAMPLE}/
+```
+
+Within each `${SAMPLE}` sudirectory, you will find the corresponding data:
+
+```
+|-- /path/to/${DATASET}/reads/${SAMPLE}/${SAMPLE}_R1.fastq.gz
+|-- /path/to/${DATASET}/reads/${SAMPLE}/${SAMPLE}_R2.fastq.gz
+|-- /path/to/${DATASET}/contigs/${SAMPLE}/${SAMPLE}.fasta
+|-- /path/to/${DATASET}/mags/${SAMPLE}/${SAMPLE}__bin1.fasta
+|-- /path/to/${DATASET}/mags${SAMPLE}//${SAMPLE}__bin2.fasta
+|-- ...
+|-- /path/to/${DATASET}/mags/${SAMPLE}__binN.fasta
+```
+
+
+All these information can be be observed in the Supplementary Table 3 of the manuscript (not publicly available yet) and also [here](https://raw.githubusercontent.com/nmquijada/food-production-resistome/refs/heads/main/files/Supplementary_Table_3_MASTER_metadata.tsv).  
+
+
+Due to the complexity of this organization, **the main steps and general code to run each process is explained below**, while specific code and examples are given in their dedicated sections.
 
 <br>
 
@@ -74,59 +110,89 @@ where:
 ## 4. Assembly-based analysis<a name="id4"></a>
 
 From the QC reads, an assembly and was performed as thorughlly described in the corresponding section of [MASTER-WP5-pipelines](https://github.com/SegataLab/MASTER-WP5-pipelines/tree/master/05-Assembly_pipeline).  
-The resulting draft metagenomes (contigs) in FASTA file were either subjected to the [TORMES pipeline](https://github.com/nmquijada/tormes) for further downstream analysis at contig-level or used for metagenome assembled genomes (MAGs) extraction.  
+
+Some manual edition of the [main assembly pipeline](https://github.com/SegataLab/MASTER-WP5-pipelines/blob/master/05-Assembly_pipeline/pipeline_assembly.sh) are required to redirect the variables to the location of the data and your installed software in your system, and then simply run:
+
+```
+/path/to/pipeline_assembly.sh path/to/${DATASET}/reads/
+```
+
+This pipeline will:
+1) Run the `run_single_assembly.sh` script to perform individual assemblies of the different QC reads from samples ion `path/to/${DATASET}/reads/`
+2) Filter contigs to a mininimum length and store them as `${SAMPLE}_filtered_contigs.fa` in `/path/to/${DATASET}/contigs/${SAMPLE}/`
+3) Align the QC reads against the metagenome assemblies using `bowtie2` and `samtools`.
+4) Find contig depths by using `jgi_summarize_bam_contig_depths` from `metabat2`. 
+5) Binning: compact contigs into bins by using `metabat2`.
+6) Verify completeness and contamination of the reconstructed bins and choose which are adequate MAGs by using `checkm2`. MAGs that overcome the process will be stored in: `/path/to/${DATASET}/mags/${SAMPLE}/`
 
 <br>
 
-[Back to index](#idx)
+The first step of donwstream analysis involve including the resulting metagenomes (contigs, `/path/to/${DATASET}/contigs/${SAMPLE}/`) and MAGs (`/path/to/${DATASET}/mags/${SAMPLE}/`) in FASTA file to the [TORMES pipeline](https://github.com/nmquijada/tormes) for CDS prediction and annotation, and AMR and virulence screening.  
 
-<br>
+Even though [TORMES](https://github.com/nmquijada/tormes) was devised for WGS of single bacterial isolates, it also accepts draft assemblies and/or MAGs with some minor rearrangements. The steps followed are described below and the main improvements are being used to develop TORMES v2.  
 
-## 4.1 Contig-level analysis<a name="id41"></a>
+### Running TORMES for downstream analysis
 
 1. Define your variables
 
 ```bash
 WORKDIR=# define your working directory
 # Then define the "input directory" containing the contigs FASTA files in different directories regarding the sample. e.g
-INDIR=/path/to/02.metagenome_assembly
+INDIR=/path/to/${DATASET}/
 ```
 
-The `metagenome_assembly` directory is expected to have the assemblies sorted by samples, as:
+<br> 
 
-```
-|-- /path/to/metagenome_assembly/00.raw_reads
-|-- /path/to/metagenome_assembly/01.QC_reads
-|-- /path/to/metagenome_assembly/02.metagenome_assembly
-```
+2. Create TORMES metadata. There's an useful tutorial on how to do it [here](https://github.com/nmquijada/tormes/wiki/Shortcut-to-generate-the-metadata-file-for-TORMES).  
 
-```
-|-- /path/to/metagenome_assembly/02.metagenome_assembly/Sample_01/contigs.fasta
-|-- /path/to/metagenome_assembly/02.metagenome_assembly/Sample_02/contigs.fasta
-|-- ...
-|-- /path/to/metagenome_assembly/02.metagenome_assembly/Sample_n/contigs.fasta
-```
+<br>
 
-2. Create TORMES metadata. There's an useful tutorial on how to do it [here](https://github.com/nmquijada/tormes/wiki/Shortcut-to-generate-the-metadata-file-for-TORMES)
+For **contigs**:
 
 ```bash
-for SAMPLE in $(ls ${INDIR}); do
-  mkdir ${WORKDIR}/${SAMPLE}
-  echo -e "${SAMPLE}\tGENOME\t${INDIR}/${SAMPLE}/contigs.fasta\tcontigs from ${SAMPLE}" >> ${WORKDIR}/tormes-metadata.txt
+for SAMPLE in $(ls ${INDIR}/contigs/); do
+  echo -e "${SAMPLE}\tGENOME\t${INDIR}/contigs/${SAMPLE}/${SAMPLE}\tcontigs from ${SAMPLE} in ${DATASET}" >> ${WORKDIR}/tormes-metadata-contigs.txt
 done
-sed -i "1iSamples\tRead1\tRead2\tDescription" > ${WORKDIR}/tormes-metadata.txt
+sed -i "1iSamples\tRead1\tRead2\tDescription" > ${WORKDIR}/tormes-metadata-contigs.txt
 # further description and metadata fields can be used, if needed
 ```
 
-3. Run TORMES
+For **MAGs**:
+
 ```bash
-tormes -m ${WORKDIR}/tormes-metadata.txt -t 64 --no_pangenome --gene_min_id 80 --gene_min_cov 80 --only_gene_prediction --prodigal_options "-p meta" --custom_genes_db "plasmidfinder" --min_contig_len 1000 -o ${WORKDIR}/MASTER-tormes 
+for SAMPLE in $(ls ${INDIR}/mags/); do
+  for BINS in $(ls ${INDIR}/mags/${SAMPLE}/); do
+    echo -e "${SAMPLE}\tGENOME\t${INDIR}/contigs/${SAMPLE}/${BIN}\MAGs from ${SAMPLE} in ${DATASET}" >> ${WORKDIR}/tormes-metadata-mags.txt
+done
+sed -i "1iSamples\tRead1\tRead2\tDescription" > ${WORKDIR}/tormes-metadata-mags.txt
 ```
 
-This command will generate the AMR screening results based on sequence alignment (BLASTN) of the contigs against 3 databases (ResFinder, CARD, Argannot).  
-For this study we used RedFinder database, so the results will be stored in:  
+<br>
 
-`${WORKDIR}/MASTER-tormes/resfinder/`
+3. Run TORMES
+```bash
+conda activate tormes-1.3.0
+for DATATYPE in contigs mags; do
+  tormes -m ${WORKDIR}/tormes-metadata-${DATATYPE}.txt -t ${NCPUS} --no_pangenome --gene_min_id 80 --gene_min_cov 80 --only_gene_prediction --prodigal_options "-p meta" --custom_genes_db "plasmidfinder" --min_contig_len 1000 -o ${WORKDIR}/MASTER-tormes-${DATATYPE}
+done
+```
+
+Where `${NCPUS}` is the number of threads to use (default = 1)
+
+This command will, among other functions:
+1) Assign taxonomy to the different contigs by using `kraken2`. It is recommended to install the latest database from [Kraken2 main repository](https://benlangmead.github.io/aws-indexes/k2)
+> Note: the flag `--use-names` from `kraken2` is not implemented in `tormes v1.3.0` but in the current beta version (private). Such flag can be added to the main code without disturbance.
+2) Predict CDS by using `prodigal`.
+3) Generate the AMR screening based on sequence alignment (`blastn`) of the contigs against 3 databases (ResFinder, CARD, Argannot). For this study we used RedFinder database, so the results will be stored in: `${WORKDIR}/MASTER-tormes-${DATATYPE}/antimicrobial_resistance_genes/resfinder/`
+4) Generate virulence creening based on sequence alignment (`blastn`) of the contigs against the VFDB database. Results located in: `${WORKDIR}/MASTER-tormes-${DATATYPE}/virulence_genes/`
+5) Search for potential plasmid replicons by sequence alignment (`blastn`) of the contigs against the PlasmidFinder database. Results located in: `${WORKDIR}/MASTER-tormes-${DATATYPE}/custom_genes_db/plasmidfinder/`
+
+> The thresholds used for sequence similarity alignments are set to 80% identity and coverage, but the output can be simply filtered by using awk, for instance:
+
+```
+threshold=90
+awk -v OFS="\t" -F "\t" -v threshold="$threshold" 'NR == 1 || ($10 > threshold)' ${WORKDIR}/MASTER-tormes-${DATATYPE}/antimicrobial_resistance_genes/resfinder/${SAMPLE}_resfinder.tab | awk -v OFS="\t" -F "\t" -v threshold="$threshold" 'NR == 1 || ($11 > threshold)'
+```
 
 
 <br>
@@ -135,13 +201,6 @@ For this study we used RedFinder database, so the results will be stored in:
 
 <br>
 
-## 4.2 MAG-level analysis<a name="id42"></a>
-
-<br>
-
-[Back to index](#idx)
-
-<br>
 
 ## 5. Mobile Genetic Elements<a name="id5"></a>
 
