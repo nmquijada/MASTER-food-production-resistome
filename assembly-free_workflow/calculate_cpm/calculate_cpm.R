@@ -10,11 +10,10 @@ data<-data[,-c(1:4)]
 #data<-data[,order(colnames(data))]
 #reads<-reads[order(reads$Sample),]
 
-reads$Sample[1747:nrow(reads)]=gsub("_1","",reads$Sample[1747:nrow(reads)])
-
-table(colnames(data)==gsub("_R1","",reads$Sample))
-colnames(data)[559]
-reads$Sample[559]
+reads$Sample[1747:nrow(reads)]=gsub("_1","",reads$Sample[1747:nrow(reads)]) # we had some issues on our data
+table(colnames(data)==gsub("_R1","",reads$Sample)) # we had some issues on our data
+colnames(data)[559] # we had some issues on our data
+reads$Sample[559] # we had some issues on our data
 
 #colnames(data)=gsub(".1","",colnames(data))
 
