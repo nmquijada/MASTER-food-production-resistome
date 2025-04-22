@@ -288,3 +288,5 @@ ggarrange(line_meat, line_cheese, line_fish, line_vegetables,
           ncol=4#,nrow=2
 )
 dev.off()
+
+
