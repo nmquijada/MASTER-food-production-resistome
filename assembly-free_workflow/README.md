@@ -46,8 +46,11 @@ to run CD-HIT and following script:
 
 ```         
 cdhit -i all.fsa -o cdhit.txt -c 0.9
-ruby extract_cluster_table.rb
+ruby extract_cluster_table.rb phenotype_file.txt cdhit_clstr_file.clstr
 ```
+Where in that case phenotype_file.txt is the phenotype.txt file from ResFinder 
+datababase repository (phenotype_20250421.txt); and cdhit_clstr_file is 
+the .clstr output from cd-hit.
 
 You must curate (and add) the genefam column manually according to
 cluster and gene columns resulted.
