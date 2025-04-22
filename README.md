@@ -206,9 +206,11 @@ awk -v OFS="\t" -F "\t" -v threshold="$threshold" 'NR == 1 || ($10 > threshold)'
 
 Different software were used for the investigation of MGE and the main steps are described below and with more detail [here](https://github.com/nmquijada/MASTER-food-production-resistome/blob/main/assembly-based_workflow/mobilome_workflow.md)  
 
+<br>
+
 ### 5.1 Plasmids
 
-<br>
+
 
 #### PlasmidFinder
 
@@ -229,7 +231,7 @@ PLATON_DB=/PATH/TO/Platon-DB/db
 
 # Generate output directory
 mkdir ${WORKDIR}/MGE/platon
-platon --db ${PLATON_DB} --output ${WORKDIR}/MGE/platon -p ${SAMPLE} --threads 8 --meta ${WORKDIR}/MASTER-tormes/${SAMPLE}.fasta
+platon --db ${PLATON_DB} --output ${WORKDIR}/MGE/platon -p ${SAMPLE} --threads 8 --meta /path/to/${DATASET}/contigs/${SAMPLE}/${SAMPLE}.fasta
 ```
 
 The output will contain all those contigs that are potentially plasmidic in a file `${SAMPLE}.plasmid.fasta` located in `${WORKDIR}/MGE/platon`
@@ -243,11 +245,24 @@ The output will contain all those contigs that are potentially plasmidic in a fi
 GENOMAD_DB=/PATH/TO/genomad/genomad_db
 
 # Run geNomad
-genomad end-to-end --cleanup ${WORKDIR}/MASTER-tormes/${SAMPLE}.fasta ${WORKDIR}/genomad ${GENOMAD_DB}
+genomad end-to-end --cleanup /path/to/${DATASET}/contigs/${SAMPLE}/${SAMPLE}.fasta ${WORKDIR}/MGE/genomad ${GENOMAD_DB}
 ```
 
 The results in file `${SAMPLE}_plasmid_summary.tsv` will contain the ID of all those contigs that are potentially plasmidic.  
-This file is stored in `${WORKDIR}/genomad/${SAMPLE}_summary/`
+This file is stored in `${WORKDIR}/MGE/genomad/${SAMPLE}_summary/`
+
+<br>
+
+### 5.2 Integrons
+
+```
+mkdir ${WORKDIR}/MGE/integrons
+integron_finder --local-max /path/to/${DATASET}/contigs/${SAMPLE}/${SAMPLE}.fasta --cpu 1 --outdir ${WORKDIR}/MGE/integrons
+```
+
+The results file `{WORKDIR}/MGE/integrons/${SAMPLE}/${SAMPLE}.summary` contains the screening for each contig, and different values for consider if they inlcude integrons or not (CALIN, In0, etc.).  
+The results file `{WORKDIR}/MGE/integrons/${SAMPLE}/${SAMPLE}.integrons` contains a thorough description if replicons are found in certain positions within each contig.
+
 
 <br>
 
