@@ -220,7 +220,7 @@ for SAMPLE in $(ls ${INDIR}/mags/); do
   for BINS in $(ls ${INDIR}/mags/${SAMPLE}/); do
     echo -e "${SAMPLE}\tGENOME\t${INDIR}/contigs/${SAMPLE}/${BIN}\MAGs from ${SAMPLE} in ${DATASET}" >> ${WORKDIR}/tormes-metadata-mags.txt
 done
-sed -i "1iSamples\tRead1\tRead2\tDescription" > ${WORKDIR}/tormes-metadata-mags.txt
+sed -i "1iSamples\tRead1\tRead2\tDescription" ${WORKDIR}/tormes-metadata-mags.txt
 ```
 
 <br>
